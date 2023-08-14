@@ -9,19 +9,8 @@ import {
   readLocalFile,
   writeLocalFile,
 } from '../../../util/fs';
-import { regEx } from '../../../util/regex';
 import type { UpdateArtifact, UpdateArtifactsResult } from '../types';
-
-function getFlutterConstraint(lockFileContent: string): string | undefined {
-  return regEx(/^\tflutter: ['"](?<flutterVersion>.*)['"]$/m).exec(
-    lockFileContent
-  )?.groups?.flutterVersion;
-}
-
-function getDartConstraint(lockFileContent: string): string | undefined {
-  return regEx(/^\tdart: ['"](?<dartVersion>.*)['"]$/m).exec(lockFileContent)
-    ?.groups?.dartVersion;
-}
+import { parsePubspecLock } from './utils';
 
 export async function updateArtifacts({
   packageFileName,
@@ -34,6 +23,9 @@ export async function updateArtifacts({
 
   if (is.emptyArray(updatedDeps) && !isLockFileMaintenance) {
     logger.debug('No updated pub deps - returning null');
+    return null;
+  } else if (updatedDeps.length === 1 && updatedDeps[0].depName === 'flutter') {
+    logger.debug('Only updated flutter sdk - returning null');
     return null;
   }
 
@@ -54,18 +46,21 @@ export async function updateArtifacts({
     if (isLockFileMaintenance) {
       cmd.push(`${toolName} pub upgrade`);
     } else {
-      cmd.push(
-        `${toolName} pub upgrade ${updatedDeps
-          .map((dep) => dep.depName)
-          .filter(is.string)
-          .map((dep) => quote(dep))
-          .join(' ')}`
-      );
+      const depNames = updatedDeps
+        .map((dep) => dep.depName)
+        .filter(is.string)
+        .filter((depName) => depName !== 'flutter')
+        .map(quote)
+        .join(' ');
+      cmd.push(`${toolName} pub upgrade ${depNames}`);
     }
 
-    const constraint = isFlutter
-      ? config.constraints?.flutter ?? getFlutterConstraint(oldLockFileContent)
-      : config.constraints?.dart ?? getDartConstraint(oldLockFileContent);
+    let constraint = config.constraints?.[toolName];
+    if (!constraint) {
+      const pubspecLock = parsePubspecLock(lockFileName, oldLockFileContent);
+      constraint = pubspecLock?.sdks[toolName];
+    }
+
     const execOptions: ExecOptions = {
       cwdFile: packageFileName,
       docker: {},

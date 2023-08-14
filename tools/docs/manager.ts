@@ -42,6 +42,7 @@ export const CategoryNames: Record<Category, string> = {
   js: 'JavaScript',
   kubernetes: 'Kubernetes',
   node: 'Node.js',
+  perl: 'Perl',
   php: 'PHP',
   python: 'Python',
   ruby: 'Ruby',
@@ -133,7 +134,9 @@ sidebar_label: ${displayName}
       md += '```\n\n';
     }
     const managerReadmeContent = await readFile(
-      `lib/modules/manager/${manager}/readme.md`
+      `lib/modules/manager/${
+        manager === 'regex' ? 'custom/regex' : manager
+      }/readme.md`
     );
     if (manager !== 'regex') {
       md += '\n## Additional Information\n\n';

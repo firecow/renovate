@@ -273,11 +273,12 @@ export interface RenovateConfig
   constraintsFiltering?: ConstraintsFilter;
 
   checkedBranches?: string[];
+  customizeDashboard?: Record<string, string>;
 }
 
 export interface CustomDatasourceConfig {
   defaultRegistryUrlTemplate?: string;
-  format?: 'json';
+  format?: 'json' | 'plain';
   transformTemplates?: string[];
 }
 
